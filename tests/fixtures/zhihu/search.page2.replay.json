@@ -1,0 +1,33 @@
+{
+  "_meta": {
+    "kind": "REPLAY_FIXTURE",
+    "endpoint": "zhihu_search",
+    "source": "developer.zhihu.com 官方 http-api.md 响应示例结构 + 构造的跨 Run 指标增长(§40: upvotes 100→160, comments 20→38)",
+    "verified": "2026-09-24"
+  },
+  "Code": 0,
+  "Message": "success",
+  "Data": {
+    "HasMore": false,
+    "SearchHashId": "987654321",
+    "Items": [
+      {
+        "Title": "RAG 评测方法综述",
+        "ContentType": "Article",
+        "ContentID": "123456789",
+        "ContentText": "本文介绍了主流 RAG 评测框架,包括 RAGAS、TruLens 等,并给出选型建议。(更新:补充了 v2 基准)",
+        "Url": "https://zhuanlan.zhihu.com/p/123456789?utm_medium=openapi_platform&utm_source=c2f012356e63",
+        "CommentCount": 38,
+        "VoteUpCount": 160,
+        "AuthorName": "张三",
+        "AuthorAvatar": "https://picx.zhimg.com/example.jpg",
+        "AuthorBadge": "",
+        "AuthorBadgeText": "",
+        "EditTime": 1710100000,
+        "CommentInfoList": [],
+        "AuthorityLevel": "2",
+        "RankingScore": 0.99
+      }
+    ]
+  }
+}

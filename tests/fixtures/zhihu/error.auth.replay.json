@@ -1,0 +1,10 @@
+{
+  "_meta": {
+    "kind": "REPLAY_FIXTURE",
+    "endpoint": "zhihu_search",
+    "source": "构造的鉴权失败场景(官方错误码 20001)",
+    "verified": "2026-09-24"
+  },
+  "Code": 20001,
+  "Message": "鉴权失败"
+}

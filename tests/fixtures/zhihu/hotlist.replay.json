@@ -1,0 +1,34 @@
+{
+  "_meta": {
+    "kind": "REPLAY_FIXTURE",
+    "endpoint": "hot_list",
+    "source": "developer.zhihu.com 官方 http-api.md 响应示例结构(官方仅返回 Title/Url/ThumbnailUrl/Summary;无 metrics/author/时间/rank 字段)",
+    "verified": "2026-09-24",
+    "note": "Items 顺序即榜单顺序 → rank = 下标 + 1(记录在 DiscoveryObservation)"
+  },
+  "Code": 0,
+  "Message": "success",
+  "Data": {
+    "Total": 3,
+    "Items": [
+      {
+        "Title": "如何评价某个热点问题?",
+        "Url": "https://www.zhihu.com/question/123456789",
+        "ThumbnailUrl": "https://pic1.zhimg.com/v2-d4b0f8158e064dbcc71eb6ce970230a9.jpg",
+        "Summary": "这是该问题的内容摘要"
+      },
+      {
+        "Title": "一篇正在热榜上的文章标题",
+        "Url": "https://zhuanlan.zhihu.com/p/987654321",
+        "ThumbnailUrl": "",
+        "Summary": ""
+      },
+      {
+        "Title": "另一个进入热榜的问题",
+        "Url": "https://www.zhihu.com/question/9876543210",
+        "ThumbnailUrl": "",
+        "Summary": "第二个问题的摘要"
+      }
+    ]
+  }
+}

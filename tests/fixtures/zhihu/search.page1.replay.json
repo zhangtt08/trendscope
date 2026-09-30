@@ -1,0 +1,67 @@
+{
+  "_meta": {
+    "kind": "REPLAY_FIXTURE",
+    "endpoint": "zhihu_search",
+    "source": "developer.zhihu.com 官方 http-api.md 响应示例结构 + 构造边界数据(非实时真实数据)",
+    "verified": "2026-09-24",
+    "note": "含 0 指标行(0 必须保留为 0)与 unknown 内容类型行"
+  },
+  "Code": 0,
+  "Message": "success",
+  "Data": {
+    "HasMore": false,
+    "SearchHashId": "987654321",
+    "Items": [
+      {
+        "Title": "RAG 评测方法综述",
+        "ContentType": "Article",
+        "ContentID": "123456789",
+        "ContentText": "本文介绍了主流 RAG 评测框架,包括 RAGAS、TruLens 等,并给出选型建议。",
+        "Url": "https://zhuanlan.zhihu.com/p/123456789?utm_medium=openapi_platform&utm_source=c2f012356e63",
+        "CommentCount": 20,
+        "VoteUpCount": 100,
+        "AuthorName": "张三",
+        "AuthorAvatar": "https://picx.zhimg.com/example.jpg",
+        "AuthorBadge": "",
+        "AuthorBadgeText": "",
+        "EditTime": 1710000000,
+        "CommentInfoList": [],
+        "AuthorityLevel": "2",
+        "RankingScore": 0.98
+      },
+      {
+        "Title": "怎么理解 rave 文化?",
+        "ContentType": "Answer",
+        "ContentID": "1903044959663284716",
+        "ContentText": "首先要澄清一个常见误解:免费版和付费版使用的是不同模型与功能配置。",
+        "Url": "https://www.zhihu.com/answer/1903044959663284716?utm_medium=openapi_platform&utm_source=c2f012356e63",
+        "CommentCount": 0,
+        "VoteUpCount": 0,
+        "AuthorName": "知乎用户",
+        "AuthorAvatar": "",
+        "AuthorBadge": "",
+        "AuthorBadgeText": "",
+        "EditTime": 1748355858,
+        "CommentInfoList": [],
+        "AuthorityLevel": "1",
+        "RankingScore": 0.77
+      },
+      {
+        "Title": "有哪些值得长期坚持的习惯?",
+        "ContentType": "Question",
+        "ContentID": "555666777",
+        "ContentText": "题主想收集一些可以长期坚持的好习惯,欢迎分享经验。",
+        "Url": "https://www.zhihu.com/question/555666777?utm_medium=openapi_platform&utm_source=c2f012356e63",
+        "CommentCount": 3,
+        "VoteUpCount": 12,
+        "AuthorName": "李四",
+        "AuthorAvatar": "",
+        "AuthorBadge": "",
+        "AuthorBadgeText": "",
+        "EditTime": 1700000000,
+        "AuthorityLevel": "3",
+        "RankingScore": 0.5
+      }
+    ]
+  }
+}

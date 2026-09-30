@@ -1,0 +1,30 @@
+{
+  "_meta": {
+    "kind": "REPLAY_FIXTURE",
+    "endpoint": "zhihu_search",
+    "source": "构造的 Schema Drift 场景(§15/§21):核心字段 ContentID/Title 消失",
+    "verified": "2026-09-24"
+  },
+  "Code": 0,
+  "Message": "success",
+  "Data": {
+    "HasMore": false,
+    "SearchHashId": "drift-001",
+    "Items": [
+      {
+        "ContentText": "这条结果的核心字段 ContentID 与 Title 全部缺失 —— 远程结构变更",
+        "Url": "https://www.zhihu.com/answer/000",
+        "CommentCount": 1,
+        "VoteUpCount": 1,
+        "AuthorName": "匿名"
+      },
+      {
+        "ContentText": "第二条同样缺失核心字段",
+        "Url": "https://www.zhihu.com/answer/001",
+        "CommentCount": 2,
+        "VoteUpCount": 2,
+        "AuthorName": "匿名"
+      }
+    ]
+  }
+}

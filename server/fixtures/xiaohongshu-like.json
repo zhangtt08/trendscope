@@ -1,0 +1,57 @@
+{
+  "name": "xiaohongshu-like-export","title": "小红书样本导出",
+  "platform": "xiaohongshu",
+  "sourceType": "fixture",
+  "mapping": {
+    "platformContentId": "note_id",
+    "title": "笔记题目",
+    "text": "笔记正文",
+    "url": "笔记链接",
+    "authorName": "博主昵称",
+    "publishedAt": "发布日期",
+    "likes": "点赞",
+    "comments": "评论",
+    "favorites": "收藏",
+    "views": "浏览量",
+    "authorFollowers": "粉丝"
+  },
+  "rows": [
+    {
+      "note_id": "66f1a2b3000000000123456a",
+      "笔记题目": "通勤穿搭 | 一件西装的三种穿法",
+      "笔记正文": " Look1: 日常通勤 Look2: 周末约会 #穿搭 #OOTD #西装穿搭",
+      "笔记链接": "https://www.xiaohongshu.com/explore/66f1a2b3000000000123456a?xsec_token=ABC123&utm_source=weixin",
+      "博主昵称": "阿岚的穿衣镜",
+      "发布日期": "2026/09/05",
+      "点赞": "1.2万",
+      "评论": "342",
+      "收藏": "8901",
+      "浏览量": "23.5万",
+      "粉丝": "8.8万"
+    },
+    {
+      "note_id": "66f1c3d4000000000654321b",
+      "笔记题目": "咖啡渣的五种妙用",
+      "笔记正文": "环保生活小技巧 #环保 #生活小妙招",
+      "笔记链接": "https://www.xiaohongshu.com/explore/66f1c3d4000000000654321b",
+      "博主昵称": "绿色生活家",
+      "发布日期": "2026-09-12",
+      "点赞": "567",
+      "评论": "23",
+      "收藏": "1200",
+      "浏览量": "1.8万"
+    },
+    {
+      "note_id": "66f1e5f5000000000987654c",
+      "笔记题目": "零互动测试笔记（真实0点赞）",
+      "笔记正文": "验证真实0不会被存成null",
+      "笔记链接": "https://www.xiaohongshu.com/explore/66f1e5f5000000000987654c",
+      "博主昵称": "新号第一天",
+      "发布日期": "unknown_date_garbage",
+      "点赞": "0",
+      "评论": "0",
+      "收藏": "0",
+      "浏览量": "44"
+    }
+  ]
+}

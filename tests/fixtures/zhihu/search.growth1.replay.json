@@ -1,0 +1,32 @@
+{
+  "_meta": {
+    "kind": "REPLAY_FIXTURE",
+    "endpoint": "zhihu_search",
+    "source": "构造的跨 Run 指标增长场景(§40)第一次采集:upvotes 100 / comments 20",
+    "verified": "2026-09-24"
+  },
+  "Code": 0,
+  "Message": "success",
+  "Data": {
+    "HasMore": false,
+    "SearchHashId": "growth-run1",
+    "Items": [
+      {
+        "Title": "Stage5 指标增长样例文章",
+        "ContentType": "Article",
+        "ContentID": "990000001",
+        "ContentText": "这是用于验证跨 Run 指标增长的构造内容。",
+        "Url": "https://zhuanlan.zhihu.com/p/990000001?utm_medium=openapi_platform&utm_source=c2f012356e63",
+        "CommentCount": 20,
+        "VoteUpCount": 100,
+        "AuthorName": "增长作者",
+        "AuthorAvatar": "",
+        "AuthorBadge": "",
+        "AuthorBadgeText": "",
+        "EditTime": 1710000000,
+        "AuthorityLevel": "2",
+        "RankingScore": 0.9
+      }
+    ]
+  }
+}

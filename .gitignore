@@ -1,0 +1,20 @@
+# 依赖与构建产物
+node_modules/
+dist/
+dist-server/
+desktop/bin/
+desktop/build/
+desktop/vendor/
+
+# 本机数据：SQLite 数据库与备份（绝不入库）
+data/
+
+# 密钥与环境（真实密钥只留本地）
+.env
+.env.*
+!.env.example
+
+# 本机杂项
+port.txt
+*.log
+.DS_Store

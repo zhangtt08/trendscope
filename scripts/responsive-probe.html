@@ -1,0 +1,49 @@
+<!doctype html>
+<!--
+  窄屏探针:被 scripts/check-responsive.mts 复制到 dist/ 后由 Chrome headless 加载。
+  iframe 内的媒体查询按 iframe 自身宽度生效,所以能真实模拟窄视口(不需要装 Playwright)。
+-->
+<html>
+  <head><meta charset="utf-8" /><title>responsive probe</title></head>
+  <body>
+    <iframe id="f" height="900" title="app"></iframe>
+    <pre id="out">running…</pre>
+    <script>
+      const width = Number(new URLSearchParams(location.search).get("w")) || 411;
+      const route = location.hash.slice(1) || "/";
+      const f = document.getElementById("f");
+      f.style.width = width + "px";
+      f.src = "/?probe=1#" + route;
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      (async () => {
+        await sleep(6000);
+        try {
+          const doc = f.contentDocument;
+          const win = f.contentWindow;
+          const vw = win.innerWidth;
+          const head = doc.querySelector("h1,h2,.section-title");
+          const lines = [
+            "innerWidth=" + vw,
+            "docScrollWidth=" + doc.documentElement.scrollWidth,
+            // 应用是 hash 路由,写错路径会被 <Route path="*"> 悄悄重定向到 /dashboard:
+            // 报出真正停在哪、渲染的是哪个标题,让"测了 A 其实测了 B"看得见。
+            "finalHash=" + (win.location.hash.slice(1) || "/"),
+            "heading=" + (head ? head.textContent.trim() : "(无标题)"),
+          ];
+          const bad = [];
+          for (const el of doc.querySelectorAll("*")) {
+            const r = el.getBoundingClientRect();
+            if (r.width > vw + 1) {
+              bad.push(el.tagName + "." + String(el.className || "").slice(0, 20) + "=" + Math.round(r.width));
+            }
+          }
+          // overflowing 只作参考:表格在 .table-wrap 内横向滚动是设计意图,不算页面溢出
+          lines.push("overflowing=" + bad.length, ...bad.slice(0, 6));
+          document.getElementById("out").textContent = lines.join("\n");
+        } catch (e) {
+          document.getElementById("out").textContent = "innerWidth=-1\nerror=" + String(e);
+        }
+      })();
+    </script>
+  </body>
+</html>

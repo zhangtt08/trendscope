@@ -1,0 +1,66 @@
+{
+  "name": "zhihu-like-export","title": "知乎样本导出",
+  "platform": "zhihu",
+  "sourceType": "fixture",
+  "mapping": {
+    "platformContentId": "target_id",
+    "contentType": "obj_type",
+    "title": "问题标题",
+    "text": "内容摘要",
+    "url": "链接",
+    "authorId": "member_id",
+    "authorName": "答主",
+    "publishedAt": "created_time",
+    "upvotes": "赞同数",
+    "comments": "条评论",
+    "views": "阅读量"
+  },
+  "rows": [
+    {
+      "target_id": "3199884412",
+      "obj_type": "answer",
+      "问题标题": "2026 年还有人买机械硬盘吗？",
+      "内容摘要": "冷数据归档依然是机械盘的主场，尤其是 SMR 盘的价格优势…",
+      "链接": "https://www.zhihu.com/question/640123456/answer/3199884412?utm_oi=99&utm_psn=abc",
+      "member_id": "zh_mem_88123",
+      "答主": "存储老炮儿",
+      "created_time": 1789000000,
+      "赞同数": "3,204",
+      "条评论": "189",
+      "阅读量": "45万"
+    },
+    {
+      "target_id": "640123456",
+      "obj_type": "question",
+      "问题标题": "2026 年还有人买机械硬盘吗？",
+      "内容摘要": "如题，想给NAS配盘，纠结HDD还是SSD。",
+      "链接": "https://www.zhihu.com/question/640123456",
+      "created_time": "2026-08-30T10:00:00+08:00",
+      "赞同数": "52",
+      "条评论": "7",
+      "阅读量": "1.2万"
+    },
+    {
+      "target_id": "881234567",
+      "obj_type": "article",
+      "问题标题": "SSD 全闪 NAS 一年使用报告",
+      "内容摘要": "功耗、噪音、性价比的完整数据 #NAS #SSD",
+      "链接": "https://zhuanlan.zhihu.com/p/881234567",
+      "member_id": "zh_mem_45678",
+      "答主": "数字极简主义者",
+      "created_time": "2026-09-08T09:30:00+08:00",
+      "赞同数": "892",
+      "条评论": "56",
+      "阅读量": "3.4万"
+    },
+    {
+      "target_id": "990000111",
+      "obj_type": "answer",
+      "问题标题": "完全没有任何指标的孤儿回答",
+      "内容摘要": "没有赞同没有评论没有阅读量，但主体完整",
+      "链接": "https://www.zhihu.com/question/640123456/answer/990000111",
+      "答主": "路过的匿名用户",
+      "created_time": "not-a-date"
+    }
+  ]
+}

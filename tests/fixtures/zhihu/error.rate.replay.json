@@ -1,0 +1,10 @@
+{
+  "_meta": {
+    "kind": "REPLAY_FIXTURE",
+    "endpoint": "zhihu_search",
+    "source": "构造的频率/额度限制场景(官方错误码 30001,含并发限制与日额度耗尽)",
+    "verified": "2026-09-24"
+  },
+  "Code": 30001,
+  "Message": "触发频率限制"
+}

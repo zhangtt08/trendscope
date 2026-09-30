@@ -1,0 +1,93 @@
+{
+  "name": "edge-cases","title": "边界样本(未知平台/异常字段)",
+  "platform": "other",
+  "sourceType": "fixture",
+  "mapping": {
+    "platform": "platform",
+    "platformContentId": "id",
+    "title": "title",
+    "text": "text",
+    "url": "url",
+    "authorId": "author_id",
+    "authorName": "author",
+    "publishedAt": "published_at",
+    "views": "views",
+    "likes": "likes",
+    "comments": "comments",
+    "shares": "shares"
+  },
+  "rows": [
+    {
+      "id": "edge_001",
+      "platform": "weibo",
+      "title": "正常微博：应该 complete/partial",
+      "text": "主体完整 #测试",
+      "url": "https://weibo.com/1234567/AbCdEfGh?mod=weibotime&utm_source=app",
+      "author_id": "wb_001",
+      "author": "微博用户甲",
+      "published_at": "2026-09-01 12:00:00",
+      "views": "0",
+      "likes": "0",
+      "comments": "0",
+      "shares": "0"
+    },
+    {
+      "id": "edge_002",
+      "platform": "weibo",
+      "title": "重复内容（与 edge_001 同 platform+id）",
+      "text": "重复导入测试行",
+      "url": "https://weibo.com/1234567/AbCdEfGh",
+      "author_id": "wb_001",
+      "author": "微博用户甲",
+      "published_at": "2026-09-01 12:00:00",
+      "views": "100",
+      "likes": "10",
+      "comments": "2",
+      "shares": "1"
+    },
+    {
+      "id": "edge_003",
+      "platform": "weibo",
+      "author": "无身份用户",
+      "views": "50",
+      "note_of_this_row": "没有任何 body（标题/正文/转写全缺）→ invalid"
+    },
+    {
+      "id": "",
+      "platform": "weibo",
+      "title": "只有标题没有ID",
+      "text": "有 body 无 id 无 url",
+      "author": "某用户",
+      "published_at": "2026-13-40 99:99:99",
+      "likes": "abc"
+    },
+    {
+      "platform": "weibo",
+      "title": "没有 id 字段但有 url → 通过 url 去重"
+    },
+    {
+      "id": "edge_006",
+      "platform": "不是已知平台",
+      "title": "未知平台行 → 归入 other",
+      "text": "platform 未知值测试",
+      "likes": "66"
+    },
+    {
+      "id": "edge_007",
+      "platform": "manual",
+      "title": "大数值边界",
+      "text": "1.2万与12万与120000",
+      "views": "1.2万",
+      "likes": "1,234",
+      "comments": "3.5亿"
+    },
+    {
+      "id": "edge_008",
+      "platform": "weibo",
+      "title": "负数指标 → null",
+      "text": "异常值处理",
+      "views": "-500",
+      "likes": "100"
+    }
+  ]
+}
