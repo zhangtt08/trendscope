@@ -11,14 +11,18 @@
 //  3. 窗口关掉时,把自己起的那个 node 一起带走,不留孤儿进程占着端口和数据库;
 //  4. 起不来时不白屏 —— 显示一页中文说明,写清楚下一步能做什么。
 //
+// 窗口外观:无边框 + 自绘标题栏(最小化/最大化/关闭三键内嵌在软件内部),
+// 标题栏区域经 WM_NCHITTEST 返回 HTCAPTION,拖拽/双击最大化/Win+方向贴靠走系统原生行为。
+//
 // 注意:源码里有中文,编译必须带 /codepage:65001,否则 csc 会按本机 ANSI 码页读,
-// 窗口标题和提示语会变成乱码。
+// 窗口标题和提示语会变成乱码。编译目标是 .NET Framework 4 自带 csc,语法保持 C# 5。
 
 using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Web.WebView2.Core;
@@ -81,21 +85,23 @@ namespace TrendScope
                 }
             }
 
-            using (var form = new Form())
+            string iconPath = null;
+            try
             {
-                form.Text = "TrendScope 趋势工作台";
+                string ico = Path.Combine(exeDir, "TrendScope.ico");
+                if (File.Exists(ico)) iconPath = ico;
+            }
+            catch { }
+
+            using (ChromeForm form = new ChromeForm("TrendScope 趋势工作台", iconPath))
+            {
                 form.Size = new Size(1440, 900);
                 form.MinimumSize = new Size(900, 600);
                 form.StartPosition = FormStartPosition.CenterScreen;
-                try
-                {
-                    string ico = Path.Combine(exeDir, "TrendScope.ico");
-                    if (File.Exists(ico)) form.Icon = new Icon(ico);
-                }
-                catch { }
 
-                var view = new WebView2 { Dock = DockStyle.Fill };
-                form.Controls.Add(view);
+                WebView2 view = new WebView2();
+                view.Dock = DockStyle.Fill;
+                form.ContentPanel.Controls.Add(view);
                 string url = "http://localhost:" + port.ToString();
 
                 form.Load += async delegate
@@ -181,5 +187,162 @@ namespace TrendScope
             }
             catch { return false; }
         }
+    }
+
+    // 无边框窗口 + 自绘标题栏:三键内嵌、拖拽区返回 HTCAPTION(原生拖拽/贴靠/双击最大化)、
+    // 边缘命中返回 HTLEFT..HTBOTTOMRIGHT(保留系统级缩放)。
+    sealed class ChromeForm : Form
+    {
+        const int HTCLIENT = 1;
+        const int HTCAPTION = 2;
+        const int HTLEFT = 10;
+        const int HTRIGHT = 11;
+        const int HTTOP = 12;
+        const int HTTOPLEFT = 13;
+        const int HTTOPRIGHT = 14;
+        const int HTBOTTOM = 15;
+        const int HTBOTTOMLEFT = 16;
+        const int HTBOTTOMRIGHT = 17;
+        const int WM_NCHITTEST = 0x84;
+        const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+        const int DWMWCP_ROUND = 2;
+
+        readonly Panel titleBar;
+        readonly Panel content;
+        readonly Button maxButton;
+
+        public ChromeForm(string title, string iconPath)
+        {
+            Text = title;
+            FormBorderStyle = FormBorderStyle.None;
+            BackColor = Color.White;
+            Font = new Font("Segoe UI", 9F);
+
+            titleBar = new Panel();
+            titleBar.Dock = DockStyle.Top;
+            titleBar.Height = 36;
+            titleBar.BackColor = Color.White;
+
+            PictureBox pic = new PictureBox();
+            pic.Size = new Size(18, 18);
+            pic.Location = new Point(10, 9);
+            pic.SizeMode = PictureBoxSizeMode.Zoom;
+            try { if (iconPath != null) pic.Image = new Icon(iconPath, 18, 18).ToBitmap(); } catch { }
+            titleBar.Controls.Add(pic);
+
+            Label label = new Label();
+            label.Text = title;
+            label.AutoSize = false;
+            label.Size = new Size(320, 36);
+            label.Location = new Point(34, 0);
+            label.TextAlign = ContentAlignment.MiddleLeft;
+            label.ForeColor = Color.FromArgb(23, 32, 51);
+            titleBar.Controls.Add(label);
+
+            Button closeButton = CaptionButton("\uE8BB", Color.FromArgb(207, 63, 79), Color.White);
+            closeButton.Click += delegate { Close(); };
+            maxButton = CaptionButton("\uE922", Color.FromArgb(237, 241, 247), Color.FromArgb(23, 32, 51));
+            maxButton.Click += delegate { ToggleMaximize(); };
+            Button minButton = CaptionButton("\uE921", Color.FromArgb(237, 241, 247), Color.FromArgb(23, 32, 51));
+            minButton.Click += delegate { WindowState = FormWindowState.Minimized; };
+            titleBar.Controls.Add(closeButton);
+            titleBar.Controls.Add(maxButton);
+            titleBar.Controls.Add(minButton);
+
+            titleBar.Resize += delegate
+            {
+                closeButton.Left = titleBar.Width - 46;
+                maxButton.Left = closeButton.Left - 46;
+                minButton.Left = maxButton.Left - 46;
+                label.Width = Math.Max(80, minButton.Left - label.Left - 8);
+            };
+
+            content = new Panel();
+            content.Dock = DockStyle.Fill;
+            content.BackColor = Color.White;
+
+            Controls.Add(content);
+            Controls.Add(titleBar);
+
+            try
+            {
+                int round = DWMWCP_ROUND;
+                DwmSetWindowAttribute(Handle, DWMWA_WINDOW_CORNER_PREFERENCE, ref round, 4);
+            }
+            catch { }
+        }
+
+        public Panel ContentPanel { get { return content; } }
+
+        static Button CaptionButton(string glyph, Color hoverBack, Color hoverFore)
+        {
+            Button b = new Button();
+            b.Text = glyph;
+            b.Font = new Font("Segoe MDL2 Assets", 9F);
+            b.Size = new Size(46, 36);
+            b.Dock = DockStyle.None;
+            b.FlatStyle = FlatStyle.Flat;
+            b.FlatAppearance.BorderSize = 0;
+            b.FlatAppearance.MouseOverBackColor = hoverBack;
+            b.ForeColor = Color.FromArgb(104, 117, 140);
+            b.BackColor = Color.White;
+            b.Tag = "caption-button";
+            b.MouseEnter += delegate { b.ForeColor = hoverFore; };
+            b.MouseLeave += delegate { b.ForeColor = Color.FromArgb(104, 117, 140); };
+            return b;
+        }
+
+        void ToggleMaximize()
+        {
+            if (WindowState == FormWindowState.Maximized)
+            {
+                WindowState = FormWindowState.Normal;
+                maxButton.Text = "\uE922";
+            }
+            else
+            {
+                MaximizedBounds = Screen.FromControl(this).WorkingArea;
+                WindowState = FormWindowState.Maximized;
+                maxButton.Text = "\uE923";
+            }
+        }
+
+        protected override void OnActivated(EventArgs e)
+        {
+            base.OnActivated(e);
+            try { MaximizedBounds = Screen.FromControl(this).WorkingArea; } catch { }
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == WM_NCHITTEST && WindowState == FormWindowState.Normal)
+            {
+                int lx = (short)((long)m.LParam & 0xFFFF);
+                int ly = (short)(((long)m.LParam >> 16) & 0xFFFF);
+                Point p = PointToClient(new Point(lx, ly));
+                int edge = 6;
+                bool left = p.X <= edge;
+                bool right = p.X >= ClientSize.Width - edge;
+                bool top = p.Y <= edge;
+                bool bottom = p.Y >= ClientSize.Height - edge;
+                if (top && left) { m.Result = (IntPtr)HTTOPLEFT; return; }
+                if (top && right) { m.Result = (IntPtr)HTTOPRIGHT; return; }
+                if (bottom && left) { m.Result = (IntPtr)HTBOTTOMLEFT; return; }
+                if (bottom && right) { m.Result = (IntPtr)HTBOTTOMRIGHT; return; }
+                if (left) { m.Result = (IntPtr)HTLEFT; return; }
+                if (right) { m.Result = (IntPtr)HTRIGHT; return; }
+                if (top) { m.Result = (IntPtr)HTTOP; return; }
+                if (bottom) { m.Result = (IntPtr)HTBOTTOM; return; }
+                if (p.Y <= titleBar.Height && p.Y > edge)
+                {
+                    m.Result = (IntPtr)HTCAPTION;
+                    return;
+                }
+            }
+            base.WndProc(ref m);
+        }
+
+        [DllImport("dwmapi.dll")]
+        static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
     }
 }
