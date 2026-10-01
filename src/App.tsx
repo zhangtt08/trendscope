@@ -18,6 +18,7 @@ import OpportunityProfile from "./pages/OpportunityProfile";
 import TopicStudio from "./pages/TopicStudio";
 import SettingsCenter from "./pages/SettingsCenter";
 import { ReportCenter } from "./pages/ReportCenter";
+import { CaptionButtons } from "./components/CaptionButtons";
 
 /**
  * 导航顺序按用户实际流程排(§115/§116):拿数据 → 看数据 → 采集/语义 → 话题 → 趋势 →
@@ -65,8 +66,9 @@ export default function App() {
   const dbDisplay = demoStatus.data?.dbDisplay ?? "";
   return (
     <div className="shell">
+      <CaptionButtons />
       <aside className="sidebar">
-        <div className="brand">
+        <div className="brand drag-region">
           <div className="brand-name">
             TREND<em>SCOPE</em>
           </div>

@@ -11,8 +11,9 @@
 //  3. 窗口关掉时,把自己起的那个 node 一起带走,不留孤儿进程占着端口和数据库;
 //  4. 起不来时不白屏 —— 显示一页中文说明,写清楚下一步能做什么。
 //
-// 窗口外观:无边框 + 自绘标题栏(最小化/最大化/关闭三键内嵌在软件内部),
-// 标题栏区域经 WM_NCHITTEST 返回 HTCAPTION,拖拽/双击最大化/Win+方向贴靠走系统原生行为。
+// 窗口外观:无边框,WebView2 铺满整个窗口;开启 IsNonClientRegionSupportEnabled 后,
+// 网页里 app-region: drag 的元素就是拖拽区,网页自绘的最小化/最大化/关闭三键通过
+// postMessage 调窗口动作 —— 标题栏真正融进应用界面(应用侧栏与头部直达窗口顶端)。
 //
 // 注意:源码里有中文,编译必须带 /codepage:65001,否则 csc 会按本机 ANSI 码页读,
 // 窗口标题和提示语会变成乱码。编译目标是 .NET Framework 4 自带 csc,语法保持 C# 5。
@@ -85,46 +86,20 @@ namespace TrendScope
                 }
             }
 
-            string iconPath = null;
-            try
-            {
-                string ico = Path.Combine(exeDir, "TrendScope.ico");
-                if (File.Exists(ico)) iconPath = ico;
-            }
-            catch { }
-
-            using (ChromeForm form = new ChromeForm("TrendScope 趋势工作台", iconPath))
+            using (ChromeForm form = new ChromeForm("TrendScope 趋势工作台"))
             {
                 form.Size = new Size(1440, 900);
                 form.MinimumSize = new Size(900, 600);
                 form.StartPosition = FormStartPosition.CenterScreen;
-
-                WebView2 view = new WebView2();
-                view.Dock = DockStyle.Fill;
-                form.ContentPanel.Controls.Add(view);
-                string url = "http://localhost:" + port.ToString();
-
-                form.Load += async delegate
+                try
                 {
-                    try
-                    {
-                        var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder, null);
-                        await view.EnsureCoreWebView2Async(env);
-                        view.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
-                        view.CoreWebView2.Settings.IsStatusBarEnabled = false;
-                        view.CoreWebView2.NewWindowRequested += OnNewWindow;
-                        view.CoreWebView2.Navigate(url);
-                    }
-                    catch (Exception e)
-                    {
-                        MessageBox.Show(
-                            "内嵌浏览器初始化失败:" + e.Message +
-                            "\n\n请确认已安装 WebView2 Runtime(Windows 10/11 通常自带)。" +
-                            "\n也可以直接打开 " + url,
-                            "TrendScope", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    }
-                };
+                    string ico = Path.Combine(exeDir, "TrendScope.ico");
+                    if (File.Exists(ico)) form.Icon = new Icon(ico);
+                }
+                catch { }
 
+                string url = "http://localhost:" + port.ToString();
+                form.ConfigureWebView(url, userDataFolder);
                 form.FormClosing += delegate { StopServer(); };
                 Application.Run(form);
             }
@@ -132,7 +107,7 @@ namespace TrendScope
         }
 
         // 应用里点开的链接(比如热榜话题)交给系统浏览器,不在桌面壳里开新窗口
-        static void OnNewWindow(object sender, CoreWebView2NewWindowRequestedEventArgs e)
+        public static void OnNewWindow(object sender, CoreWebView2NewWindowRequestedEventArgs e)
         {
             var deferral = e.GetDeferral();
             try { Process.Start(new ProcessStartInfo(e.Uri) { UseShellExecute = true }); } catch { }
@@ -189,12 +164,11 @@ namespace TrendScope
         }
     }
 
-    // 无边框窗口 + 自绘标题栏:三键内嵌、拖拽区返回 HTCAPTION(原生拖拽/贴靠/双击最大化)、
-    // 边缘命中返回 HTLEFT..HTBOTTOMRIGHT(保留系统级缩放)。
+    // 无边框窗口:WebView2 铺满整窗,标题栏完全由网页承担 ——
+    // 侧栏品牌行/头部行声明 app-region: drag 即可拖拽(HTCAPTION 交给 WebView2 非客户区支持),
+    // 网页自绘三键经 postMessage 调窗口动作;边缘命中仍走 WndProc 保留系统级缩放。
     sealed class ChromeForm : Form
     {
-        const int HTCLIENT = 1;
-        const int HTCAPTION = 2;
         const int HTLEFT = 10;
         const int HTRIGHT = 11;
         const int HTTOP = 12;
@@ -207,62 +181,16 @@ namespace TrendScope
         const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
         const int DWMWCP_ROUND = 2;
 
-        readonly Panel titleBar;
-        readonly Panel content;
-        readonly Button maxButton;
+        readonly WebView2 view = new WebView2();
 
-        public ChromeForm(string title, string iconPath)
+        public ChromeForm(string title)
         {
             Text = title;
             FormBorderStyle = FormBorderStyle.None;
             BackColor = Color.White;
-            Font = new Font("Segoe UI", 9F);
 
-            titleBar = new Panel();
-            titleBar.Dock = DockStyle.Top;
-            titleBar.Height = 36;
-            titleBar.BackColor = Color.White;
-
-            PictureBox pic = new PictureBox();
-            pic.Size = new Size(18, 18);
-            pic.Location = new Point(10, 9);
-            pic.SizeMode = PictureBoxSizeMode.Zoom;
-            try { if (iconPath != null) pic.Image = new Icon(iconPath, 18, 18).ToBitmap(); } catch { }
-            titleBar.Controls.Add(pic);
-
-            Label label = new Label();
-            label.Text = title;
-            label.AutoSize = false;
-            label.Size = new Size(320, 36);
-            label.Location = new Point(34, 0);
-            label.TextAlign = ContentAlignment.MiddleLeft;
-            label.ForeColor = Color.FromArgb(23, 32, 51);
-            titleBar.Controls.Add(label);
-
-            Button closeButton = CaptionButton("\uE8BB", Color.FromArgb(207, 63, 79), Color.White);
-            closeButton.Click += delegate { Close(); };
-            maxButton = CaptionButton("\uE922", Color.FromArgb(237, 241, 247), Color.FromArgb(23, 32, 51));
-            maxButton.Click += delegate { ToggleMaximize(); };
-            Button minButton = CaptionButton("\uE921", Color.FromArgb(237, 241, 247), Color.FromArgb(23, 32, 51));
-            minButton.Click += delegate { WindowState = FormWindowState.Minimized; };
-            titleBar.Controls.Add(closeButton);
-            titleBar.Controls.Add(maxButton);
-            titleBar.Controls.Add(minButton);
-
-            titleBar.Resize += delegate
-            {
-                closeButton.Left = titleBar.Width - 46;
-                maxButton.Left = closeButton.Left - 46;
-                minButton.Left = maxButton.Left - 46;
-                label.Width = Math.Max(80, minButton.Left - label.Left - 8);
-            };
-
-            content = new Panel();
-            content.Dock = DockStyle.Fill;
-            content.BackColor = Color.White;
-
-            Controls.Add(content);
-            Controls.Add(titleBar);
+            view.Dock = DockStyle.Fill;
+            Controls.Add(view);
 
             try
             {
@@ -272,39 +200,58 @@ namespace TrendScope
             catch { }
         }
 
-        public Panel ContentPanel { get { return content; } }
-
-        static Button CaptionButton(string glyph, Color hoverBack, Color hoverFore)
+        // 配置 WebView2:启用非客户区支持(app-region 生效),接线网页三键消息
+        public void ConfigureWebView(string url, string userDataFolder)
         {
-            Button b = new Button();
-            b.Text = glyph;
-            b.Font = new Font("Segoe MDL2 Assets", 9F);
-            b.Size = new Size(46, 36);
-            b.Dock = DockStyle.None;
-            b.FlatStyle = FlatStyle.Flat;
-            b.FlatAppearance.BorderSize = 0;
-            b.FlatAppearance.MouseOverBackColor = hoverBack;
-            b.ForeColor = Color.FromArgb(104, 117, 140);
-            b.BackColor = Color.White;
-            b.Tag = "caption-button";
-            b.MouseEnter += delegate { b.ForeColor = hoverFore; };
-            b.MouseLeave += delegate { b.ForeColor = Color.FromArgb(104, 117, 140); };
-            return b;
+            Load += async delegate
+            {
+                try
+                {
+                    var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder, null);
+                    await view.EnsureCoreWebView2Async(env);
+                    view.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
+                    view.CoreWebView2.Settings.IsStatusBarEnabled = false;
+                    view.CoreWebView2.Settings.IsNonClientRegionSupportEnabled = true;
+                    view.CoreWebView2.NewWindowRequested += Program.OnNewWindow;
+                    view.CoreWebView2.WebMessageReceived += OnWebMessage;
+                    view.CoreWebView2.Navigate(url);
+                }
+                catch (Exception e)
+                {
+                    MessageBox.Show(
+                        "内嵌浏览器初始化失败:" + e.Message +
+                        "\n\n请确认已安装 WebView2 Runtime(Windows 10/11 通常自带)。" +
+                        "\n也可以直接打开 " + url,
+                        "TrendScope", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            };
+        }
+
+        void OnWebMessage(object sender, CoreWebView2WebMessageReceivedEventArgs e)
+        {
+            string msg = e.TryGetWebMessageAsString();
+            if (msg == "window:minimize") WindowState = FormWindowState.Minimized;
+            else if (msg == "window:toggle-maximize") ToggleMaximize();
+            else if (msg == "window:close") Close();
         }
 
         void ToggleMaximize()
         {
-            if (WindowState == FormWindowState.Maximized)
-            {
-                WindowState = FormWindowState.Normal;
-                maxButton.Text = "\uE922";
-            }
-            else
+            bool willMaximize = WindowState != FormWindowState.Maximized;
+            if (willMaximize)
             {
                 MaximizedBounds = Screen.FromControl(this).WorkingArea;
                 WindowState = FormWindowState.Maximized;
-                maxButton.Text = "\uE923";
             }
+            else
+            {
+                WindowState = FormWindowState.Normal;
+            }
+            try
+            {
+                view.CoreWebView2.PostWebMessageAsString(willMaximize ? "window:maximized:true" : "window:maximized:false");
+            }
+            catch { }
         }
 
         protected override void OnActivated(EventArgs e)
@@ -333,11 +280,6 @@ namespace TrendScope
                 if (right) { m.Result = (IntPtr)HTRIGHT; return; }
                 if (top) { m.Result = (IntPtr)HTTOP; return; }
                 if (bottom) { m.Result = (IntPtr)HTBOTTOM; return; }
-                if (p.Y <= titleBar.Height && p.Y > edge)
-                {
-                    m.Result = (IntPtr)HTCAPTION;
-                    return;
-                }
             }
             base.WndProc(ref m);
         }

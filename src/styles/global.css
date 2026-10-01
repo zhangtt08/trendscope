@@ -586,3 +586,43 @@ mark.hl { background: var(--amber-soft); color: var(--ink); padding: 0 2px; bord
 }
 .dialog-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
 .dialog-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+
+/* ── 桌面壳自绘标题栏：拖拽区 + 窗口三键（仅在 WebView2 壳内生效）── */
+.drag-region {
+  -webkit-app-region: drag;
+}
+.brand.drag-region button,
+.brand.drag-region a,
+.brand.drag-region input {
+  -webkit-app-region: no-drag;
+}
+.caption-buttons {
+  position: fixed;
+  top: 6px;
+  right: 10px;
+  z-index: 60;
+  display: flex;
+  height: 30px;
+  -webkit-app-region: no-drag;
+}
+.caption-btn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 100%;
+  border: 0;
+  border-radius: 6px;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: default;
+  transition: background-color 150ms ease-out, color 150ms ease-out;
+}
+.caption-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--ink);
+}
+.caption-btn-close:hover {
+  background: #cf3f4f;
+  color: #fff;
+}
