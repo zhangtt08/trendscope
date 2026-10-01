@@ -68,7 +68,15 @@ export default function App() {
     <div className="shell">
       <CaptionButtons />
       <aside className="sidebar">
-        <div className="brand drag-region">
+        <div
+          className="brand drag-region"
+          onMouseDown={(e) => {
+            if (e.button !== 0) return;
+            if ((e.target as HTMLElement).closest("button, a, input")) return;
+            const webview = (window as unknown as { chrome?: { webview?: { postMessage: (m: string) => void } } }).chrome?.webview;
+            webview?.postMessage("window:drag-start");
+          }}
+        >
           <div className="brand-name">
             TREND<em>SCOPE</em>
           </div>
