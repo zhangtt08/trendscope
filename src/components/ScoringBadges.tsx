@@ -72,7 +72,7 @@ export function ScoreBar({ score, width = 72 }: { score: number | null; width?: 
 }
 
 /** 组件分解条(§Y):velocity/reach/EQ/relative/structure;不可用 = 未计入(权重已重归一)。 */
-const COMPONENT_ZH: Record<string, string> = {
+export const COMPONENT_ZH: Record<string, string> = {
   velocity: "互动增速",
   reach: "触达",
   engagementQuality: "互动质量",

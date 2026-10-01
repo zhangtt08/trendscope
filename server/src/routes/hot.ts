@@ -22,7 +22,21 @@ import { clientOrServerError } from "./errors";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-const DEFAULT_CHANNEL_INTERVAL_MIN = 30;
+/** 渠道默认自动采集间隔(分钟)。渠道表、/api/hot/channels 与 Agent 注册表共用这一份。 */
+export const DEFAULT_HOT_CHANNEL_INTERVAL_MIN = 30;
+
+/**
+ * "为什么某个平台不提供"的如实说明。渠道表与 Agent 注册表共用这一份,
+ * 免得两处各写一遍后对同一件事给出两种说法。
+ */
+export const REFUSED_CHANNELS: { label: string; reason: string }[] = [
+  {
+    label: "抖音 / 小红书 / 微博的官方私有接口",
+    reason:
+      "调用它们需要伪造平台签名或逆向风控参数(属于检测规避),本产品不做;" +
+      "这些平台的公开热榜改由聚合源渠道获取,见上方渠道列表。",
+  },
+];
 
 export interface ChannelPreset {
   key: string;
@@ -431,7 +445,7 @@ const CaptureSchema = z
 export function channelSchedule(c: ChannelPreset): { type: "interval"; intervalMs: number } | { type: "manual" } {
   // 要开窗口的渠道刻意留在手动档:每 30 分钟弹一个浏览器窗口不是自动化,是骚扰。
   if (c.onDemandOnly) return { type: "manual" };
-  const min = c.intervalMinutes ?? DEFAULT_CHANNEL_INTERVAL_MIN;
+  const min = c.intervalMinutes ?? DEFAULT_HOT_CHANNEL_INTERVAL_MIN;
   return { type: "interval", intervalMs: min * 60_000 };
 }
 
@@ -511,18 +525,11 @@ export function createHotRouter(db: DB, runtime: CollectionRuntime): Router {
         label: c.label,
         note: c.note,
         requiresEnv: c.needsEnv ?? null,
-        intervalMinutes: c.onDemandOnly ? null : (c.intervalMinutes ?? DEFAULT_CHANNEL_INTERVAL_MIN),
+        intervalMinutes: c.onDemandOnly ? null : (c.intervalMinutes ?? DEFAULT_HOT_CHANNEL_INTERVAL_MIN),
         onDemandOnly: Boolean(c.onDemandOnly),
         available: c.needsEnv ? Boolean(process.env[c.needsEnv]?.trim()) : true,
       })),
-      refused: [
-        {
-          label: "抖音 / 小红书 / 微博的官方私有接口",
-          reason:
-            "调用它们需要伪造平台签名或逆向风控参数(属于检测规避),本产品不做;"
-            + "这些平台的公开热榜改由聚合源渠道获取,见上方渠道列表。",
-        },
-      ],
+      refused: REFUSED_CHANNELS,
     });
   });
 

@@ -1,6 +1,11 @@
 @echo off
 rem TrendScope one-click start.
-rem   deps (if missing) -> build -> then launch the desktop program.
+rem   deps (if missing) -> build if needed -> then launch the desktop program.
+rem
+rem The build step goes through scripts\build-if-needed.ps1, which compares the
+rem newest build input against a build stamp and skips the rebuild when nothing
+rem changed. That turns a ~13 s "npm run build" on every launch into ~0.3 s.
+rem Force a rebuild by deleting dist\, or run this file with --force-build.
 rem
 rem Preferred path is desktop\bin\TrendScope.exe (a real native window, see desktop\TrendScope.cs).
 rem If it has not been built yet, we fall back to an app-mode browser window against the
@@ -29,8 +34,11 @@ call npm install
 if errorlevel 1 goto failed
 :build
 
-echo [2/3] Building front-end and server...
-call npm run build
+echo [2/3] Checking whether the front-end and server need a rebuild...
+set "PS=%WINDIR%\System32\WindowsPowerShell\v1.0\powershell.exe"
+if not exist "%PS%" set "PS=powershell"
+if "%~1"=="--force-build" set "BUILD_ARGS=-Force"
+"%PS%" -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\build-if-needed.ps1" %BUILD_ARGS%
 if errorlevel 1 goto nostart
 
 if not exist "desktop\bin\TrendScope.exe" goto fallback

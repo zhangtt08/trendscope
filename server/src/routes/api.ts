@@ -21,7 +21,6 @@ import { FixtureAdapter, listFixtures, loadFixture } from "../adapters/fixture";
 import type { NormalizeContext } from "../adapters/types";
 import { queryContent, parseContentQuery, getContentDetail } from "../services/queryService";
 import { getDashboardStats } from "../services/statsService";
-import { getDataHealth } from "../services/healthService";
 import {
   getTrendOverview,
   getMomentumList,
@@ -81,13 +80,9 @@ export function createApiRouter(
   });
 
   // ---- data health (Stage 2 §21/22) ----
-  router.get("/health", async (_req, res) => {
-    try {
-      res.json(await getDataHealth(db));
-    } catch (e) {
-      serverError(res, e);
-    }
-  });
+  // 已上移到 routes/agent.ts 的 GET /api/health:那里在同一条响应里既给 Agent 标准信封
+  // ({ok,data:{project,version,agent_api,uptime_ms}}),也原样保留这份扁平字段给数据总览页。
+  // 一个事实只留一处回答 —— 不要在两个 router 各写一遍 /health。
 
   // ---- content queries ----
   router.get("/content", async (req, res) => {

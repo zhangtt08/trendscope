@@ -17,6 +17,9 @@ import { maybeCascadeAfterCollection } from "./collection/hotCascade";
 import { CollectionRuntime } from "./services/collection/runtime";
 import { CollectionScheduler } from "./services/collection/scheduler";
 import { ensureFtsBackfilled } from "./services/searchIndexService";
+import { getDataHealth } from "./services/healthService";
+import { getDashboardStats } from "./services/statsService";
+import { getAnalysisStatus } from "./analysis/status";
 import { getDemoStatus, loadDemoData } from "./services/demoService";
 import { reapInterruptedRuns } from "./analysis/repository";
 import { appVersion } from "./version";
@@ -76,6 +79,11 @@ async function main(): Promise<void> {
     if (isDemoMode()) {
       void seedDemo(db);
     }
+    // 首屏预热。实测:本机 1.3 GB 的库上,第一次 GET /api/health 要 **35 秒**(冷文件缓存,
+    // 若干条全库聚合查询逐页把数据读进来),热了以后是 0.1 秒。那 35 秒原本砸在用户打开软件
+    // 的第一次点击上 —— 界面只能干转。listen 之后再后台跑一遍同样的查询,把代价挪到人看不见
+    // 的时候。跑在 setImmediate 之后,不推迟 listen;失败只 warn:预热没成功不等于服务坏了。
+    startPreWarm(db);
   });
 
   server.on("error", (e: NodeJS.ErrnoException) => {
@@ -120,6 +128,36 @@ async function preMigrationBackup(sqlite: ReturnType<typeof openDb>["sqlite"], p
     );
     console.error("[trendscope] 迁移仍会继续(全部为新增表/索引)。如需绝对安全,请先手工执行 npm run db:backup 并保留产物。");
   }
+}
+
+async function preWarmDashboard(db: ReturnType<typeof openDb>["db"]): Promise<void> {
+  // 只跑首屏真的会读的那几个查询,不写任何数据 —— 这是"把等待从人面前挪走",不是预热缓存作假。
+  const steps: [string, () => Promise<unknown>][] = [
+    ["数据健康 /api/health", async () => getDataHealth(db)],
+    ["数据总览 /api/stats", async () => getDashboardStats(db)],
+    ["分析状态 /api/analysis/status", async () => getAnalysisStatus(db)],
+  ];
+  const t0 = Date.now();
+  for (const [label, run] of steps) {
+    const s = Date.now();
+    try {
+      await run();
+      console.log(`[trendscope] 首屏预热:${label} —— ${Date.now() - s}ms`);
+    } catch (e) {
+      console.warn(`[trendscope] 首屏预热:${label} 失败(不影响服务):`, e instanceof Error ? e.message : e);
+    }
+  }
+  console.log(`[trendscope] 首屏预热完成,共 ${Date.now() - t0}ms(之后界面第一次打开就不会再等这几十秒)`);
+}
+
+/**
+ * 服务已经在监听了,所以这一段完全在请求路径之外。
+ * 让它失败也影响不到服务本身。
+ */
+function startPreWarm(db: ReturnType<typeof openDb>["db"]): void {
+  setImmediate(() => {
+    void preWarmDashboard(db).catch((e) => console.warn("[trendscope] 首屏预热整体失败:", e));
+  });
 }
 
 async function seedDemo(db: ReturnType<typeof openDb>["db"]): Promise<void> {

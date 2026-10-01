@@ -9,8 +9,10 @@
 import express from "express";
 import path from "node:path";
 import fs from "node:fs";
+import { performance } from "node:perf_hooks";
 import type { DB } from "./db/client";
 import { createApiRouter } from "./routes/api";
+import { createAgentRouter } from "./routes/agent";
 import { createCollectionRouter } from "./routes/collection";
 import { createEmbeddingRouter, createContentSemanticRouter } from "./routes/embedding";
 import { createTopicsRouter } from "./routes/topics";
@@ -33,10 +35,13 @@ export function createApp(
     makeStudioProvider?: () => StudioProvider;
     dbFile?: string;
     onImported?: (summary: ImportSummary) => void;
+    /** 进程启动时刻(uptime_ms 的分母)。缺省取 Node 自己的 timeOrigin,不需要额外传参。 */
+    bootedAt?: number;
   } = {},
 ): express.Express {
   const app = express();
   app.disable("x-powered-by");
+  const bootedAt = opts.bootedAt ?? Math.round(performance.timeOrigin);
 
   // 轮询端点(分析进度 / 工作室证据)必须绕开 HTTP 缓存:同一个 URL 反复 GET 时,
   // 浏览器会给启发式缓存,进度就会看起来卡住。
@@ -46,6 +51,11 @@ export function createApp(
   });
 
   // collection router FIRST (the /api router ends with a 404 catch-all)
+  //
+  // Agent 契约四条(/api/health、/api/agent/{tools,manifest}、POST /api/agent/tool)排在最前:
+  // 末尾那条 `app.get("*")` 会把任何未匹配路径当 SPA 路由返回 HTML,晚注册一步,
+  // JSON 端点就会被 HTML 吃掉(curl 拿到 200 + text/html,Agent 直接看不懂)。
+  app.use("/api", createAgentRouter(db, { bootedAt, makeStudioProvider: opts.makeStudioProvider }));
   app.use("/api/collection", createCollectionRouter(db, runtime));
   app.use("/api/embedding", createEmbeddingRouter(db));
   app.use("/api/scoring", createScoringRouter(db));
