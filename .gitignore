@@ -9,6 +9,14 @@ desktop/vendor/
 # 本机数据：SQLite 数据库与备份（绝不入库）
 data/
 
+# WAL 边车文件（主库旁边的 *-wal / *-shm / *-journal）—— 交付物里一个都不许有。
+# 它们只在有进程读写时存在；把主库单独拷走而留下旧的 -wal，得到的是"少了最后一段"的库，
+# 所以退出流程必须先 checkpoint（见 server/src/shutdown.ts）。这几行挡的是
+# "库文件被生成到 data/ 以外的地方（临时库、验收用的隔离库）时，边车跟着入库"。
+*.db-wal
+*.db-shm
+*.db-journal
+
 # 密钥与环境（真实密钥只留本地）
 .env
 .env.*

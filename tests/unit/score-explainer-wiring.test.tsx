@@ -10,6 +10,8 @@
  *   ③ PendingHint 在长任务下真的给出"已等待 / 为什么慢 / 可替代动作",不是光转圈。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { act, createElement, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { TrendBreakdown, LifecycleExplain } from "../../src/components/TrendBreakdown";
@@ -146,8 +148,16 @@ describe("MethodNote 被真正渲染进评分卡", () => {
     // 35% 来自 stub 的 trend.weights.contentGrowth,不是组件里写死的数字
     expect(text).toContain("内容增长");
     expect(text).toContain("35%");
-    // 口径出处点名了那两个接口
-    expect(text).toContain("GET /api/scoring/profile");
+    // 口径出处要说得清 —— 但**用中文句子**,接口路径属于代码不属于文案(§78 中英混杂那条判据)。
+    // 这里三个方向一起钉:可见文案给出来源、给出当下这一份的指纹、并且不再出现接口路径;
+    // 接口路径本身仍然在组件的代码里(取数就靠它),所以"来源可核对"这件事一点没被削弱。
+    const source = readFileSync(resolve(process.cwd(), "src/components/MethodNote.tsx"), "utf8");
+    expect(text).toContain("口径来源");
+    expect(text).toContain("不是文档抄本");
+    expect(text).toContain("配置指纹"); // 当下这一份的指纹,和文档抄本区分开的凭据
+    expect(text).not.toContain("GET /api/scoring/profile");
+    expect(source).toContain('api<ScoringProfile>("/scoring/profile")');
+    expect(source).toContain('api<OpportunityProfileResponse>("/opportunity/profile")');
   });
 
   it("LifecycleExplain 内嵌生命周期判据说明(阈值取自接口)", async () => {

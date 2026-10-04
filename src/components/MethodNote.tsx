@@ -78,7 +78,7 @@ async function load(): Promise<typeof cache> {
       cache = {
         scoring,
         opportunity,
-        failed: scoring === null ? "评分口径读取失败(服务未响应 /api/scoring/profile)" : null,
+        failed: scoring === null ? "评分口径暂时读不到：本地服务没有回话。确认软件已经启动，再刷新这一页。" : null,
       };
       inflight = null;
       return cache;
@@ -222,7 +222,10 @@ export function MethodNote({ kind, ctx }: { kind: MethodKind; ctx?: { scoreVersi
               </div>
             </>
           ) : (
-            <p className="small muted">当前激活的机会模型读不到(库里没有标记为激活的 profile)。</p>
+            <p className="small muted">
+              这台机器的库里没有标记为"当前使用"的机会模型，所以这一段没有口径可展示。
+              去「机会模型」页点『设为当前模型』指定一份就行 —— 已有的每一份都没被改动。
+            </p>
           )}
           <p className="small muted">
             机会指数不重算下层数字,只消费趋势 / 爆发 / 情报 / 共性四台引擎已经算好的结果再按权重合成。
@@ -233,9 +236,9 @@ export function MethodNote({ kind, ctx }: { kind: MethodKind; ctx?: { scoreVersi
       )}
 
       <div className="method-foot mono small muted">
-        <span>口径来源:GET /api/scoring/profile · /api/opportunity/profile(引擎当下在用的一份,不是文档抄本)</span>
-        <span>configSnapshot {sp.configSnapshot.slice(0, 18)}…</span>
-        {ctx?.scoreVersion ? <span>本条 scoreVersion:{ctx.scoreVersion}</span> : null}
+        <span>口径来源：服务端当下在用的那一份（由评分与机会两台引擎实时给出，不是文档抄本）</span>
+        <span>配置指纹 {sp.configSnapshot.slice(0, 18)}…</span>
+        {ctx?.scoreVersion ? <span>这一条用的口径版本：{ctx.scoreVersion}</span> : null}
         {ctx?.calculatedAt ? <span>算于 {fmtDateTime(ctx.calculatedAt)}</span> : null}
       </div>
     </details>
