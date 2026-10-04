@@ -3,11 +3,26 @@
  * §55-§57/§64:趋势分解展示。核心是"unknown 不能长成一个数字",
  * 以及话题页与趋势中心共用同一份实现(否则两处必然漂移)。
  */
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, createElement, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { LifecycleExplain, TrendBreakdown } from "../../src/components/TrendBreakdown";
 import type { TrendDetailPayload } from "../../src/types/scoring";
+
+// 现在 TrendBreakdown / LifecycleExplain 内嵌了 MethodNote,它会异步读 /api/scoring/profile。
+// 给个最小 stub 让那次读取能落定,免得 render 之后又有一次未冲刷的 setState 触发 act 警告。
+// 注意:这只喂 MethodNote 的外部读取,不改动下面任何一条 §55-§59 的断言。
+const METHOD_STUB = {
+  burst: {
+    version: "B", weights: { velocity: 0.35 }, velocityWindows: [{ key: "24h", hours: 24 }],
+    velocityFallback: ["72h"], minSnapshotsForVelocity: 2,
+    cohort: { minSample: 20, floorSample: 5, levelLabels: ["A", "B"] }, creatorMinHistory: 5,
+    ageBuckets: [{ key: "0-6h", maxHours: 6 }], confidence: {},
+  },
+  trend: { version: "T", weights: { contentGrowth: 0.35 }, windowHours: 168, burstDensityThreshold: 60, minMembers: 5, confidence: {} },
+  lifecycle: { risingTrendMin: 60, hysteresisConsecutive: 3, hysteresisStrongJump: 25 },
+  configSnapshot: "snap", note: "note",
+};
 
 let container: HTMLDivElement;
 let root: Root | null = null;
@@ -82,6 +97,16 @@ beforeEach(() => {
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: unknown) => {
+      const url = String(input);
+      const json = (b: unknown) => ({ ok: true, status: 200, json: async () => b }) as unknown as Response;
+      if (url.includes("/api/opportunity/profile")) return json({ profiles: [], note: "n" });
+      if (url.includes("/api/scoring/profile")) return json(METHOD_STUB);
+      return json({});
+    }),
+  );
 });
 
 afterEach(() => {
@@ -89,18 +114,23 @@ afterEach(() => {
   root = null;
   if (r) act(() => r.unmount());
   container.remove();
+  vi.unstubAllGlobals();
 });
 
-function render(node: ReactNode) {
+// MethodNote 挂载后异步读一次口径;在同一个 act 里把微任务冲刷干净,免得落定发生在 act 之外。
+async function render(node: ReactNode) {
   const rr = root!;
-  act(() => {
+  await act(async () => {
     rr.render(node);
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
   });
 }
 
 describe("TrendBreakdown", () => {
-  it("§52 不可用组件显示「数据不足 + 原因」,不出现冒充分数的 0", () => {
-    render(createElement(TrendBreakdown, { detail: payload() }));
+  it("§52 不可用组件显示「数据不足 + 原因」,不出现冒充分数的 0", async () => {
+    await render(createElement(TrendBreakdown, { detail: payload() }));
     const text = container.textContent ?? "";
     expect(text).toContain("数据不足");
     expect(text).toContain("当前与基准窗口的活跃创作者数无法确定");
@@ -112,8 +142,8 @@ describe("TrendBreakdown", () => {
     expect(text).toContain("缺失信号(权重已按比例重归一");
   });
 
-  it("§57 没有假精确:63.4567 不会原样出现在证据里", () => {
-    render(
+  it("§57 没有假精确:63.4567 不会原样出现在证据里", async () => {
+    await render(
       createElement(TrendBreakdown, {
         detail: payload({
           components: {
@@ -132,15 +162,15 @@ describe("TrendBreakdown", () => {
     expect(text).toContain("2.1");
   });
 
-  it("§50/§55 旧 Run 没记录分解 → 明说未记录,不按当前权重重算冒充", () => {
-    render(createElement(TrendBreakdown, { detail: payload({ breakdownRecorded: false, components: null }) }));
+  it("§50/§55 旧 Run 没记录分解 → 明说未记录,不按当前权重重算冒充", async () => {
+    await render(createElement(TrendBreakdown, { detail: payload({ breakdownRecorded: false, components: null }) }));
     const text = container.textContent ?? "";
     expect(text).toContain("没有记录组件分解");
     expect(text).not.toContain("有效 ");
   });
 
-  it("§58/§59 生命周期:当前阶段 + 最近迁移原因 + 待确认滞回", () => {
-    render(
+  it("§58/§59 生命周期:当前阶段 + 最近迁移原因 + 待确认滞回", async () => {
+    await render(
       createElement(LifecycleExplain, {
         detail: { lifecycle: "rising", pendingLifecycle: "peak", pendingCount: 1 },
         events: [

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { fmtDateTime, EM_DASH } from "../lib/format";
 import { ConfidenceBadge, BreakdownBars, UNSCORABLE_ZH } from "./ScoringBadges";
+import { MethodNote } from "./MethodNote";
 import type { ContentScoreDetail } from "../types/scoring";
 
 function parse<T>(v: string | T | null | undefined): T | null {
@@ -122,6 +123,7 @@ export function BurstScoreCard({ contentItemId }: { contentItemId: number }) {
           )}
         </>
       )}
+      <MethodNote kind="burst" ctx={{ scoreVersion: cur.scoreVersion, calculatedAt: cur.calculatedAt }} />
     </div>
   );
 }

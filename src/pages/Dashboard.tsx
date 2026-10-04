@@ -18,6 +18,7 @@ import {
 } from "../lib/format";
 import { BatchStatusChip, PlatformTag } from "../components/badges";
 import { LoadError, RefreshHint } from "../components/RequestState";
+import { PendingHint } from "../components/PendingHint";
 import { FirstRunGuide, DataSourceStatus } from "../components/Onboarding";
 import { FullAnalysisPanel } from "../components/FullAnalysisPanel";
 import { HotCapturePanel } from "../components/HotCapture";
@@ -75,6 +76,11 @@ export default function Dashboard() {
       <div className="fade-in">
         <div className="card">
           <div className="small muted">正在读取数据总览…</div>
+          <PendingHint
+            show
+            why="本机库较大时,首屏这几条聚合查询要把数据逐页读进来;服务启动后已在后台预热过一次,通常很快,第一次冷启动可能慢一些。"
+            alt="可以先去「内容浏览器」按条件翻页,或用「一键抓热点」采集。"
+          />
         </div>
       </div>
     );

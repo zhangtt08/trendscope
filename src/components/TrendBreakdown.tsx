@@ -6,6 +6,7 @@
  * 两处必然随引擎漂移,现在统一成"服务端给什么就显示什么"(§50)。
  */
 import { ScoreBar, LifecycleBadge } from "./ScoringBadges";
+import { MethodNote } from "./MethodNote";
 import type { TrendComponentView, TrendDetailPayload } from "../types/scoring";
 import { fmtDateTime, EM_DASH } from "../lib/format";
 
@@ -97,6 +98,8 @@ export function TrendBreakdown({ detail }: { detail: TrendDetailPayload }) {
           {unavailable.map(([k, r]) => `${detail.components?.[k]?.label ?? k}(${r})`).join("、")}
         </div>
       )}
+
+      <MethodNote kind="trend" ctx={{ scoreVersion: detail.scoreVersion, calculatedAt: detail.calculatedAt }} />
     </div>
   );
 }
@@ -136,6 +139,7 @@ export function LifecycleExplain({
           (第 {detail.pendingCount} 次)
         </div>
       )}
+      <MethodNote kind="lifecycle" />
     </div>
   );
 }

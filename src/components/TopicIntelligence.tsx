@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { fmtDateTime, EM_DASH } from "../lib/format";
 import { ConfidenceBadge, ScoreBar } from "./ScoringBadges";
+import { MethodNote } from "./MethodNote";
 
 const EVIDENCE_ZH: Record<string, string> = {
   high: "高",
@@ -409,6 +410,7 @@ function OpportunityMini({ opp, miss }: { opp: OppData | null; miss: boolean }) 
       <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
         <Link className="btn-sm" to="/opportunity" style={{ textDecoration: "none" }}>去机会工作台管理决策 →</Link>
       </div>
+      <MethodNote kind="opportunity" ctx={{ calculatedAt: cur.calculatedAt }} />
     </div>
   );
 }

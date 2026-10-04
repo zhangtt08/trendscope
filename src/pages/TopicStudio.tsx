@@ -12,6 +12,7 @@ import { post } from "../lib/api";
 import { buildQuery, useDebounced, useResource } from "../lib/useResource";
 import { fmtDateTime, fmtMetric, EM_DASH, PLATFORM_LABELS } from "../lib/format";
 import { LoadError, RefreshHint } from "../components/RequestState";
+import { PendingHint } from "../components/PendingHint";
 import { CONFIDENCE_ZH, LIFECYCLE_ZH } from "../components/ScoringBadges";
 import type {
   StudioEvidencePackage,
@@ -730,6 +731,11 @@ export default function TopicStudio() {
                 </button>
               </div>
             </div>
+            <PendingHint
+              show={generating}
+              why="选题方案要真的调用一次已配置的 AI 服务(本机实测整段生成可到 1 分钟以上),不是本地计算。"
+              alt="可以先读上方的证据摘要与确定性分析,这些不调用模型、照常可读。"
+            />
             {!view.settings.configured && (
               <div className="banner info">
                 证据摘要与全部分析功能不依赖 AI 服务,可照常使用。启用选题方案生成需要在项目目录的 .env 中设置

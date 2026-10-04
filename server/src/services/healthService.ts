@@ -1,5 +1,5 @@
 /** Data Health API (Stage 2 §21/22) — deterministic metrics only. */
-import { desc, eq, isNull, and, sql, count } from "drizzle-orm";
+import { desc, eq, isNull, sql, count } from "drizzle-orm";
 import type { DB } from "../db/client";
 import { contentItems, importBatches, rawRecords, duplicateCandidates } from "../db/schema";
 
@@ -25,42 +25,41 @@ export interface DataHealth {
   }[];
 }
 
+/**
+ * 首屏聚合的读法:以前对 content_items 打 4 条独立的全库 count(*)
+ * (total / 缺发布时间 / 无任何指标 / 缺作者),每条都逐页扫一遍。1.3 GB 的库上
+ * 这就是 /api/health 冷启动 12~35 秒的主要来源;而 getDataHealth 同时被
+ * /api/health、/api/analysis/status 与 overview 工具复用,等于每个首屏都扫四遍。
+ *
+ * 现在折成**一次扫描**:SQLite 里 `x IS NULL` 求值为 1/0,`a AND b` 同样 1/0,
+ * 于是 `SUM(...)` 就是原来的 count(*)。四条查询的 WHERE 都以 `merged_into_content_item_id IS NULL`
+ * 为公共前缀,合并后逐字段语义完全一致 —— 不是近似,是同一判据少扫三遍。
+ * byQuality / byPlatform 是两种分组键,合并不了,各留一条(合计 6 条扫描 → 3 条)。
+ */
 export async function getDataHealth(db: DB): Promise<DataHealth> {
-  const [totalRow] = await db
-    .select({ n: count() })
-    .from(contentItems)
-    .where(isNull(contentItems.mergedIntoContentItemId));
-
-  const [missingPublishedAt] = await db
-    .select({ n: count() })
-    .from(contentItems)
-    .where(and(isNull(contentItems.publishedAt), isNull(contentItems.mergedIntoContentItemId)));
-
-  const [missingAnyMetric] = await db
-    .select({ n: count() })
-    .from(contentItems)
-    .where(
-      and(
-        isNull(contentItems.views),
-        isNull(contentItems.likes),
-        isNull(contentItems.comments),
-        isNull(contentItems.shares),
-        isNull(contentItems.favorites),
-        isNull(contentItems.upvotes),
-        isNull(contentItems.mergedIntoContentItemId),
-      ),
-    );
-
-  const [missingAuthor] = await db
-    .select({ n: count() })
-    .from(contentItems)
-    .where(
-      and(
-        isNull(contentItems.authorId),
-        isNull(contentItems.authorName),
-        isNull(contentItems.mergedIntoContentItemId),
-      ),
-    );
+  const live = sql`${contentItems.mergedIntoContentItemId} IS NULL`;
+  const scalars = db.get(
+    sql`SELECT
+           COUNT(*) AS total,
+           SUM(${contentItems.publishedAt} IS NULL) AS missing_published_at,
+           SUM(${contentItems.views} IS NULL
+               AND ${contentItems.likes} IS NULL
+               AND ${contentItems.comments} IS NULL
+               AND ${contentItems.shares} IS NULL
+               AND ${contentItems.favorites} IS NULL
+               AND ${contentItems.upvotes} IS NULL) AS missing_any_metric,
+           SUM(${contentItems.authorId} IS NULL
+               AND ${contentItems.authorName} IS NULL) AS missing_author
+         FROM ${contentItems}
+         WHERE ${live}`,
+  ) as
+    | {
+        total: number;
+        missing_published_at: number | null;
+        missing_any_metric: number | null;
+        missing_author: number | null;
+      }
+    | undefined;
 
   const byQuality = await db
     .select({ quality: contentItems.dataQuality, n: count() })
@@ -104,10 +103,12 @@ export async function getDataHealth(db: DB): Promise<DataHealth> {
     .limit(5);
 
   return {
-    totalContent: totalRow?.n ?? 0,
-    missingPublishedAt: missingPublishedAt?.n ?? 0,
-    missingAnyMetric: missingAnyMetric?.n ?? 0,
-    missingAuthor: missingAuthor?.n ?? 0,
+    totalContent: scalars?.total ?? 0,
+    // SUM 在空表上返回 NULL(而 COUNT(*) 返回 0);?? 0 把"没有行"如实折成 0,
+    // 与合并前的四条 count(*) 语义一致 —— 空库不会凭空冒出一个 null。
+    missingPublishedAt: scalars?.missing_published_at ?? 0,
+    missingAnyMetric: scalars?.missing_any_metric ?? 0,
+    missingAuthor: scalars?.missing_author ?? 0,
     byQuality,
     byPlatform,
     pendingDuplicateCandidates: pending?.n ?? 0,
