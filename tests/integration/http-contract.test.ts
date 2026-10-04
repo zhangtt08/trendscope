@@ -104,6 +104,15 @@ afterAll(() => {
   sqlite?.close();
 });
 
+it("错误 JSON 和超限导入分别返回 400 与 413，服务保持可用", async () => {
+  const malformed = await fetch(base + '/api/import', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{' });
+  expect(malformed.status).toBe(400);
+  expect(malformed.headers.get('content-type')).toContain('application/json');
+  const oversized = await fetch(base + '/api/import', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: 'x'.repeat(15 * 1024 * 1024) }) });
+  expect(oversized.status).toBe(413);
+  expect((await get('/api/health')).status).toBe(200);
+});
+
 describe("前端实际调用的每个 GET 端点都必须存在(不是 404)且不崩(不是 500)", () => {
   const paths: [string, string[]][] = [
     ["/api/health", ["totalContent"]],

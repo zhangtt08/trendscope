@@ -92,7 +92,11 @@ export function createApp(
       const msg = err instanceof Error ? err.message : String(err);
       console.error("[server]", msg);
       if (!res.headersSent) {
-        res.status(500).json({ error: `服务器内部错误: ${msg}` });
+        const status = (err as { status?: number } | null)?.status;
+        const clientError = typeof status === 'number' && status >= 400 && status < 500;
+        res.status(clientError ? status : 500).json({
+          error: clientError ? (status === 413 ? '请求内容过大，请减少本次导入的数据量' : '请求内容格式无效，请检查后重试') : `服务器内部错误: ${msg}`,
+        });
       }
     },
   );
