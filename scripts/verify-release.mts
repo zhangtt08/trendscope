@@ -105,6 +105,8 @@ const CJK = "[一-鿿]";
     "STUDIO_CLI_COMMAND",
     "WEIBO_COOKIE",
     "TRENDSCOPE_HOT_CASCADE",
+    // 本机边界的可选共享令牌(默认留空 = 不启用;闸门要求非 GET 带 x-agent-token)
+    "TRENDSCOPE_LOCAL_TOKEN",
   ];
   if (!fs.existsSync(file)) {
     record(".env.example", "FAIL", "文件不存在");

@@ -11,7 +11,8 @@ import { loadDotEnv } from "./env";
 import { openDb, migrate, pendingMigrations, resolveDbPath, isDemoMode } from "./db/client";
 import { createBackup } from "./services/backup";
 import { createShutdown } from "./shutdown";
-import { createApp } from "./app";
+import { createApp, listenLocal } from "./app";
+import { DEFAULT_PORT } from "./local-guard";
 import { startAutoAnalysis } from "./analysis/autoAnalysis";
 import { maybeCascadeAfterCollection } from "./collection/hotCascade";
 import { CollectionRuntime } from "./services/collection/runtime";
@@ -24,7 +25,10 @@ import { getDemoStatus, loadDemoData } from "./services/demoService";
 import { reapInterruptedRuns } from "./analysis/repository";
 import { appVersion } from "./version";
 
-const PORT = Number(process.env.PORT ?? 5184);
+// 端口只有一个来源:环境变量 PORT,缺省 DEFAULT_PORT。同一个值既交给 listen,也交给本机边界
+// 的 Host/Origin 判定 —— 判定端口与实际监听端口分叉时,合法请求会被自己的闸门拒掉。
+const RAW_PORT = Number(process.env.PORT ?? DEFAULT_PORT);
+const PORT = Number.isInteger(RAW_PORT) && RAW_PORT > 0 && RAW_PORT < 65536 ? RAW_PORT : DEFAULT_PORT;
 
 async function main(): Promise<void> {
   const dot = loadDotEnv();
@@ -69,13 +73,17 @@ async function main(): Promise<void> {
 
   const app = createApp(db, runtime, {
     dbFile: file,
+    // 闸门判定用的端口 = 下面真正 listen 的那一个,同一份常量,不分叉。
+    localGuard: { port: PORT },
     // 用户导入(CSV/JSON/手工)与采集同等待遇:库里多了新内容就补一次分析
     onImported: (summary) => {
       startAutoAnalysis(db, { accepted: summary.imported, status: "completed" });
     },
   });
-  const server: Server = app.listen(PORT, () => {
-    console.log(`[trendscope] 服务已启动:http://localhost:${PORT}`);
+  // 只绑本机回环。`app.listen(PORT)` 不写 host 时 Node 默认绑 0.0.0.0 —— 那就是把可写接口
+  // 摊给整个局域网(2026-10-05 在本机实测到过)。绑定地址与 Host/Origin 判定是两层,都要在。
+  const server: Server = listenLocal(app, PORT, (bound) => {
+    console.log(`[trendscope] 服务已启动:http://${bound.address}:${bound.port}(只监听本机回环,局域网不可达)`);
     if (isDemoMode()) {
       void seedDemo(db);
     }
@@ -89,9 +97,10 @@ async function main(): Promise<void> {
   server.on("error", (e: NodeJS.ErrnoException) => {
     if (e.code === "EADDRINUSE") {
       console.error(
-        `[trendscope] 启动失败:端口 ${PORT} 已被占用(可能有一个旧实例还在跑)。\n` +
-          `            换一个端口重试:cmd 里 set PORT=5199 && npm start;PowerShell 里 $env:PORT='5199';npm start\n` +
-          `            或先停掉旧实例:npm run doctor 会告诉你端口状态。`,
+        `[trendscope] 启动失败:本机回环上的端口 ${PORT} 已被占用(多半是还有一个旧实例在跑)。\n` +
+          `            服务只监听 127.0.0.1,所以这不是"网络问题",换端口即可:\n` +
+          `            cmd 里 set PORT=5199 && npm start;PowerShell 里 $env:PORT='5199';npm start\n` +
+          `            或先停掉旧实例:npm run doctor 会告诉你端口状态(它报的是 127.0.0.1:${PORT})。`,
       );
       process.exit(1);
     }

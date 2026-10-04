@@ -26,11 +26,22 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     // non-json response body — fall through to status check
   }
   if (!res.ok) {
-    const msg =
-      body && typeof body === "object" && "error" in body
-        ? String((body as { error: unknown }).error)
-        : `请求失败（HTTP ${res.status}）`;
-    throw new Error(msg);
+    // 错误体有两种既有形状,都必须读出人话:
+    //   · `{error:"字符串"}` —— 本仓业务端点一贯的写法;
+    //   · `{error:{code,message}}` + 顶层 `message` —— Agent 契约与本机边界闸门(403)的写法。
+    // 只认第一种的话,被闸门拒掉时界面会显示 `[object Object]`,而那句中文拒绝理由
+    // ("这一条拒绝与你的登录状态无关")就永远到不了用户眼前。
+    const raw = body && typeof body === "object" ? (body as { error?: unknown; message?: unknown }) : null;
+    const nested = raw && typeof raw.error === "object" && raw.error !== null
+      ? (raw.error as { message?: unknown }).message
+      : undefined;
+    const candidates = [
+      typeof raw?.error === "string" ? raw.error : undefined,
+      typeof nested === "string" ? nested : undefined,
+      typeof raw?.message === "string" ? raw.message : undefined,
+    ];
+    const msg = candidates.find((c) => c && c.trim()) ?? `请求失败（HTTP ${res.status}）`;
+    throw new Error(String(msg));
   }
   return body as T;
 }

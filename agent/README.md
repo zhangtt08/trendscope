@@ -37,6 +37,23 @@ node agent/mcp-server.mjs                            # 任意 MCP 客户端直�
 
 实际地址写入 `agent/.endpoint`（端口被占时服务会 +1）。
 
+## 入站边界（调用方要知道的三件事）
+
+服务是**本机服务**，所以有一条第一道中间件的闸门（`server/src/local-guard.ts`，在 `server/src/app.ts` 注册）：
+
+1. `Host` 必须逐字是 `127.0.0.1:<端口>`、`localhost:<端口>` 或 `[::1]:<端口>`，且端口要等于服务实际监听的端口。
+   用 `http://<局域网 IP>:5184` 或任何域名访问都会被 403 `forbidden_host` 拒掉——服务本身也只绑 `127.0.0.1`。
+2. `Origin` / `Referer` 只要带了，就必须落在同一个回环 host:port。判定**从不**拿 `Origin` 跟请求自己的 `Host` 比，
+   所以把域名解析到 127.0.0.1（DNS rebinding）那种"看着同源"的请求仍是 403。
+3. 可选：`.env` 里设了 `TRENDSCOPE_LOCAL_TOKEN` 时，非 GET 请求必须带一致的 `x-agent-token` 头（常数时间比较）。
+   留空 = 不启用。⚠ 设了它，浏览器界面里的写入也会被拒，除非调用方自己带这个头。
+
+拒绝一律是 JSON（`{ok:false, code, message, error:{code,message}}`），不是 HTML 403——`agent/mcp-server.mjs`、
+`agent/tools.mjs` 打的就是 `http://127.0.0.1:<端口>`，天然满足第 1 条。
+
+> `server/src/routes/agent.ts` 里的 `baseUrlOf()` 只决定 manifest 里** advertise 出来的地址**，不是防御；
+> 边界只由上面那道闸门负责。
+
 ## 一个必须知道的坑
 
 `app.get('*')` 会把未知路径返成 SPA 的 HTML。Agent 契约端点必须注册在通配兜底**之前**，

@@ -11,6 +11,10 @@
  *
  * ⚠ 挂载顺序:`app.get("*")` 会把任何未匹配路径返回 SPA 的 HTML,而 `createApiRouter`
  *   末尾还有一条 404 兜底。所以这四个端点必须**先于**它们注册,否则 JSON 端点会被 HTML 吃掉。
+ *
+ * 入站边界(只接受本机回环 Host、Origin/Referer 必须落在回环、可选共享令牌)不在这里,
+ * 也不在这里重复实现一遍 —— 那是 `server/src/app.ts` 第一个中间件(`server/src/local-guard.ts`)
+ * 的职责,四个契约端点与界面、SPA 走的是同一道闸门。
  */
 import express from "express";
 import type { DB } from "../db/client";
@@ -35,8 +39,12 @@ export interface AgentRouterOptions {
 }
 
 /**
- * base_url 只回环:优先用请求里的 Host(用户可能换端口启动),
- * 但把 localhost 归一成 127.0.0.1 —— 别的机器拿到这个地址应该连不上,这正是设计意图。
+ * base_url 只是**对外 advertised 的地址**(给 Agent 看的清单里那句"你来打哪里"),
+ * 优先用请求里的 Host 是为了用户换端口启动时清单不说错话,并把 localhost 归一成 127.0.0.1。
+ *
+ * ⚠ 这不是防御,也别当防御用:它不改写任何判定,更不校验任何头。
+ * 本机边界(Host 逐字回环 + Origin/Referer + 可选令牌)在 `server/src/local-guard.ts`,
+ * 由 `server/src/app.ts` 作为第一个中间件执行。把这里当闸门 = 闸门不存在。
  */
 export function baseUrlOf(req: express.Request): string {
   const host = req.headers.host?.trim();
