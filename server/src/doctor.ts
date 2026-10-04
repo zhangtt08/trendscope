@@ -8,6 +8,7 @@
 import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
+import { LOCAL_BIND_HOST } from "./local-guard";
 import { appVersion } from "./version";
 
 // 与应用本身保持一致:一切路径都以"当前工作目录"为项目根(npm start/npm run doctor
@@ -28,14 +29,26 @@ function nodeMajor(): number {
   return Number(process.versions.node.split(".")[0]);
 }
 
-function portFree(port: number): Promise<{ free: boolean; error?: string }> {
+/**
+ * 探一个端口在**某个具体地址**上是否空闲。
+ *
+ * 为什么判据里必须带地址:同一个端口号,绑在 `127.0.0.1` 与绑在 `0.0.0.0` 是两件完全不同的事
+ * —— 前者只有本机能连,后者整个局域网都进得来。过去这一行写死 `127.0.0.1` 探测却把结果报成
+ * "端口 5184 可用",而当时服务实际监听的是 `0.0.0.0`(Node 不带 host 参数时的默认值),
+ * 于是体检说的是"回环上没人",用户读成"这台机器上没人"。
+ * 现在探测地址与应用绑定地址同源(都取 `LOCAL_BIND_HOST`),报告里也必须把这个地址写出来。
+ */
+function probePort(
+  port: number,
+  host: string,
+): Promise<{ free: boolean; host: string; error?: string }> {
   return new Promise((resolve) => {
     const srv = net.createServer();
-    srv.once("error", (e: NodeJS.ErrnoException) => resolve({ free: false, error: e.code }));
+    srv.once("error", (e: NodeJS.ErrnoException) => resolve({ free: false, host, error: e.code }));
     srv.once("listening", () => {
-      srv.close(() => resolve({ free: true }));
+      srv.close(() => resolve({ free: true, host }));
     });
-    srv.listen(port, "127.0.0.1");
+    srv.listen(port, host);
   });
 }
 
@@ -161,14 +174,44 @@ export async function runChecks(opts: { port?: number } = {}): Promise<CheckResu
     });
   }
 
-  // 6) 端口
-  const p = await portFree(port);
-  out.push({
-    name: `端口 ${port}`,
-    level: p.free ? "PASS" : "WARN",
-    detail: p.free ? "可用" : `已被占用(${p.error ?? "EADDRINUSE"})`,
-    hint: p.free ? undefined : `换个端口启动:PORT=5199 npm start;或先停掉占用该端口的旧实例`,
-  });
+  // 6) 端口 —— 报的是**应用实际会绑的那个地址**,而且不许把"回环上没人"说成"这端口空闲"
+  //
+  // 实测(本机 Windows,2026-10-05):已经有一个进程在 `0.0.0.0:P` 上监听时,
+  // 再探 `127.0.0.1:P` 会拿到"空闲"。旧体检就是这么报的 —— 于是它说"端口可用",
+  // 而那时应用绑的是 0.0.0.0(Node 不带 host 的默认值),真启动会撞 EADDRINUSE;
+  // 更要紧的是:那个占着端口的进程对整个局域网开放,界面与 Agent 都可能打到它身上。
+  // 现在两条探测都要做,并且报告里必须写清楚是哪一个地址空闲、被占用的是哪一个地址。
+  const bindHost = LOCAL_BIND_HOST;
+  const onBind = await probePort(port, bindHost);
+  const onAll = await probePort(port, "0.0.0.0");
+  if (!onBind.free) {
+    out.push({
+      name: `端口 ${bindHost}:${port}`,
+      level: "WARN",
+      detail: `已被占用(${onBind.error ?? "EADDRINUSE"})` +
+        (onAll.free ? ` —— 占用者只占 ${bindHost}:${port}` : ` —— 而且有一个进程在监听 0.0.0.0:${port},整个局域网都进得来`),
+      hint:
+        `换一个端口启动:PORT=5199 npm start(之后要访问的就是 ${bindHost}:5199);` +
+        `或先确认是不是旧实例还在跑 —— 只停你自己起的那一个。`,
+    });
+  } else if (!onAll.free) {
+    out.push({
+      name: `端口 ${bindHost}:${port}`,
+      level: "WARN",
+      detail:
+        `${bindHost}:${port} 本身能绑,但端口 ${port} 上已经有一个监听 **所有网卡** 的进程(0.0.0.0:${port})。` +
+        `它对整个局域网开放,界面与 Agent 都可能打到它而不是本服务 —— 最常见的原因是还有一个升级前的旧实例在跑。`,
+      hint:
+        `先确认那一个是谁(它不是本机回环服务);要么把它停掉(只停你自己起的),要么用 PORT= 换一个端口,` +
+        `本服务只会绑 ${bindHost},不会对外开放。`,
+    });
+  } else {
+    out.push({
+      name: `端口 ${bindHost}:${port}`,
+      level: "PASS",
+      detail: `空闲 —— ${bindHost}:${port} 与 0.0.0.0:${port} 两侧都没有人占,服务起来后只有本机能连`,
+    });
+  }
 
   // 7) 构建产物
   const hasServer = fs.existsSync(path.join(ROOT, "dist-server", "index.js"));
