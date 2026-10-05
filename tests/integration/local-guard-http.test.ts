@@ -432,7 +432,7 @@ describe("本机回环的合法请求照常工作", () => {
     expect(r.status).toBe(200);
   });
 
-  it("没配令牌时(默认)非 GET 不需要 x-agent-token", async () => {
+  it("没配令牌时(默认)非 GET 不需要 x-trendscope-token", async () => {
     const r = await raw(auto, {
       method: "POST",
       path: "/api/agent/tool",
@@ -484,7 +484,7 @@ describe("闸门注册在 SPA 兜底之前", () => {
 /* ---------- 5. 可选共享令牌 ---------- */
 
 describe("配置了 TRENDSCOPE_LOCAL_TOKEN 时", () => {
-  it("非 GET 必须带一致的 x-agent-token", async () => {
+  it("非 GET 必须带一致的 x-trendscope-token", async () => {
     const noToken = await raw(tokened, {
       method: "POST",
       path: "/api/agent/tool",
@@ -497,7 +497,7 @@ describe("配置了 TRENDSCOPE_LOCAL_TOKEN 时", () => {
     const wrongToken = await raw(tokened, {
       method: "POST",
       path: "/api/agent/tool",
-      headers: { "Content-Type": "application/json", "x-agent-token": "unit-secreu" },
+      headers: { "Content-Type": "application/json", "x-trendscope-token": "unit-secreu" },
       body: "{}",
     });
     expect(wrongToken.json?.error?.code).toBe("token_required");
@@ -505,7 +505,7 @@ describe("配置了 TRENDSCOPE_LOCAL_TOKEN 时", () => {
     const okToken = await raw(tokened, {
       method: "POST",
       path: "/api/agent/tool",
-      headers: { "Content-Type": "application/json", "x-agent-token": "unit-secret" },
+      headers: { "Content-Type": "application/json", "x-trendscope-token": "unit-secret" },
       body: JSON.stringify({ tool: "trendscope.overview", input: {} }),
     });
     expect(okToken.status).toBe(200);
@@ -521,7 +521,7 @@ describe("配置了 TRENDSCOPE_LOCAL_TOKEN 时", () => {
     const r = await raw(tokened, {
       method: "POST",
       path: "/api/agent/tool",
-      headers: { "Content-Type": "application/json", "x-agent-token": "unit-secret" },
+      headers: { "Content-Type": "application/json", "x-trendscope-token": "unit-secret" },
       hostHeader: "evil.example.com",
       body: "{}",
     });
@@ -532,11 +532,11 @@ describe("配置了 TRENDSCOPE_LOCAL_TOKEN 时", () => {
     const r = await raw(tokened, {
       method: "POST",
       path: "/api/agent/tool",
-      headers: { "Content-Type": "application/json", "x-agent-token": "wrong" },
+      headers: { "Content-Type": "application/json", "x-trendscope-token": "wrong" },
       body: "{}",
     });
     expect(r.text).not.toContain("unit-secret");
-    expect(r.text).toContain("x-agent-token");
+    expect(r.text).toContain("x-trendscope-token");
   });
 });
 

@@ -13,7 +13,7 @@
  * 1. `Host` 必须逐字等于 `127.0.0.1:<port>`、`localhost:<port>` 或 `[::1]:<port>`;
  * 2. `Origin`/`Referer` 带了就必须同样落在回环 host:port 上 —— **绝不拿 Origin 跟请求自己的
  *    Host 比**(一比就正好把 rebinding 放行:rebinding 时两者都是攻击者的域名);
- * 3. 设置了 `TRENDSCOPE_LOCAL_TOKEN` 时,非 GET 请求必须带一致的 `x-agent-token`(常数时间比较)。
+ * 3. 设置了 `TRENDSCOPE_LOCAL_TOKEN` 时,非 GET 请求必须带一致的 `x-trendscope-token`(常数时间比较)。
  *
  * 这个文件刻意写成**纯函数、零依赖、不 import express/node 运行时 API**:判定表能在单测里
  * 逐条驱动(不起服务),Express 那一层外壳只是它的一个适配器,住在 `server/src/app.ts`。
@@ -30,7 +30,7 @@ export const LOCAL_BIND_HOST = "127.0.0.1";
 
 /** 共享令牌的变量名与请求头名(只列名,值永远不进代码/日志/界面)。 */
 export const TOKEN_ENV_NAME = "TRENDSCOPE_LOCAL_TOKEN";
-export const TOKEN_HEADER_NAME = "x-agent-token";
+export const TOKEN_HEADER_NAME = "x-trendscope-token";
 
 /**
  * 入站请求体上限。**必须高于本仓最大的合法写入请求**,否则闸门会抢在 body parser 之前拒绝,
@@ -62,7 +62,7 @@ export interface GuardRequest {
   contentLength?: string | null;
   /** `Transfer-Encoding` 头原值,可缺。只有明确写了 chunked 才算"长度未知地带"。 */
   transferEncoding?: string | null;
-  /** `x-agent-token` 头,可缺。 */
+  /** `x-trendscope-token` 头,可缺。 */
   token?: string | null;
 }
 

@@ -45,7 +45,7 @@ node agent/mcp-server.mjs                            # 任意 MCP 客户端直�
    用 `http://<局域网 IP>:5184` 或任何域名访问都会被 403 `forbidden_host` 拒掉——服务本身也只绑 `127.0.0.1`。
 2. `Origin` / `Referer` 只要带了，就必须落在同一个回环 host:port。判定**从不**拿 `Origin` 跟请求自己的 `Host` 比，
    所以把域名解析到 127.0.0.1（DNS rebinding）那种"看着同源"的请求仍是 403。
-3. 可选：`.env` 里设了 `TRENDSCOPE_LOCAL_TOKEN` 时，非 GET 请求必须带一致的 `x-agent-token` 头（常数时间比较）。
+3. 可选：`.env` 里设了 `TRENDSCOPE_LOCAL_TOKEN` 时，非 GET 请求必须带一致的 `x-trendscope-token` 头（常数时间比较）。
    留空 = 不启用。⚠ 设了它，浏览器界面里的写入也会被拒，除非调用方自己带这个头。
 
 拒绝一律是 JSON（`{ok:false, code, message, error:{code,message}}`），不是 HTML 403——`agent/mcp-server.mjs`、

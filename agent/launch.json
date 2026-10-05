@@ -1,9 +1,13 @@
 {
   "command": "node",
-  "args": ["dist-server/index.js"],
+  "args": [
+    "dist-server/index.js"
+  ],
   "ready_port": 5184,
   "ready_path": "/api/health",
   "note": "TrendScope 用项目自带的常驻 Express 服务(npm start 走的就是这一条命令),没有第二个 agent 进程,也没有第二个端口。PORT 环境变量或根目录 port.txt 可改端口(默认 5184);实际地址会被写进 agent/.endpoint。",
   "requires_build": "dist-server/ 是构建产物。缺失时先 npm run build:server,或直接双击 start-trendscope.bat(它按 scripts/build-if-needed.ps1 判断要不要重建)。",
-  "dev_command": "npm run dev 起的是 tsx watch 服务端 + vite 前端,服务端仍在 5184,Agent 四个端点同样可用。"
+  "dev_command": "npm run dev 起的是 tsx watch 服务端 + vite 前端,服务端仍在 5184,Agent 四个端点同样可用。",
+  "probe_tool_query": "overview",
+  "_probe_tool_query_note": "\"_probe_note\": \"验收器真跑一次只读探路：trendscope.overview 是 risk=read、零必填、只读数据现状的工具。就地并入型（本项目不另起进程）必须点名安全工具，不许让验收器随机挑一条。\","
 }
